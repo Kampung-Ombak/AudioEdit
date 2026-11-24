@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audioku — Audio Editor</title>
+<style>
+:root{--y:#ffd21a;--bg:#060606;--panel:#101010;--line:#343434;--text:#eee;--muted:#888}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#090909,#020202);color:var(--text);font:13px Arial,sans-serif}
+.app{width:min(1100px,96vw);margin:7px auto}header,.editor,.transport{border:1px solid var(--line);background:#101010}
+header{min-height:54px;height:auto;border-radius:13px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;gap:8px;align-items:center;color:var(--y);font-size:17px;font-weight:bold}.logo{width:34px;height:34px;border:1px solid #555;border-radius:12px;display:grid;place-items:center;color:var(--y);font-weight:900}.actions{display:flex;gap:6px;flex-wrap:wrap}
+button,.file{height:30px;padding:0 10px;border-radius:18px;border:1px solid #3a3a3a;background:#111;color:#eee;font-weight:bold;cursor:pointer}button:hover,.file:hover{border-color:#777}.primary{background:var(--y);color:#050505;border-color:var(--y)}button:disabled{opacity:.4;cursor:not-allowed}.file{display:flex;align-items:center}.file input{display:none}
+.editor{margin-top:8px;border-radius:14px;padding:8px}.title{font-size:9px;color:var(--y);font-weight:bold;letter-spacing:.8px;margin:2px 0 5px}.presets{display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap}.preset{height:25px;padding:0 11px;border-color:#6b5800;color:var(--y);background:#171500;font-size:10px}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.ctl{border:1px solid var(--line);border-radius:10px;padding:6px;background:#111;min-width:0}.ctl label{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aaa;font-weight:bold;gap:5px}.val{color:var(--y);white-space:nowrap}.reset{float:right;border:0;background:transparent;color:#666;padding:0;height:auto;font-size:9px}.reset:hover{color:var(--y)}
+input[type=range]{width:100%;height:4px;appearance:none;background:#333;border-radius:8px;margin-top:8px}input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--y)}input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--y)}select{width:100%;height:25px;margin-top:5px;border-radius:13px;background:#111;color:#eee;border:1px solid #444;font-size:10px;padding:0 8px}
+.wave{height:clamp(135px,24vh,205px);margin-top:7px;border:1px solid var(--line);border-radius:15px;position:relative;overflow:hidden;background:#0c0c0c}.wave canvas{width:100%;height:100%}.empty{position:absolute;inset:0;display:grid;place-items:center;color:#666;font-size:11px}.status{position:absolute;left:12px;top:10px;background:#090909cc;padding:5px 8px;border-radius:9px;color:#aaa;font-size:10px}
+.transport{margin-top:7px;border-radius:13px;padding:7px;display:grid;grid-template-columns:210px 1fr 240px;gap:12px;align-items:center}.time{font-variant-numeric:tabular-nums;white-space:nowrap}.btns{display:flex;gap:7px;align-items:center}.circle{width:34px;padding:0;border-radius:50%}.play{width:38px}.timeline{height:6px;background:#333;border-radius:8px;cursor:pointer}.progress{height:100%;width:0;background:var(--y);border-radius:8px}.vol{display:flex;align-items:center;gap:8px}.vol input{margin:0}.bottom{margin-top:7px;display:flex;justify-content:space-between;color:#777;font-size:10px;gap:10px}.hint{color:#666}
+@media(min-width:901px) and (max-height:820px){
+.app{margin:5px auto}.editor{padding:6px;margin-top:6px}.controls{gap:4px}.ctl{padding:5px}.wave{height:clamp(115px,20vh,165px)}.transport{margin-top:6px;padding:6px}.bottom{margin-top:5px;font-size:9px}
+}
+@media(max-width:900px){.controls{grid-template-columns:repeat(2,1fr)}.transport{grid-template-columns:1fr}}@media(max-width:560px){.controls{grid-template-columns:1fr 1fr}header{height:auto;gap:10px;padding:10px;flex-wrap:wrap}.wave{height:220px}.bottom{flex-direction:column}}
+
+</style>
+</head>
+<body><div class="app">
+<header><div class="brand"><div class="logo">A</div>Audioku</div><div class="actions"><label class="file primary">♫ Buka lagu<input id="file" type="file" accept="audio/*"></label><button id="exportWav" disabled>⇩ WAV</button><button id="exportMp3" disabled>⇩ MP3*</button><button id="installApp" type="button">＋ INSTAL PC</button></div></header>
+<section class="editor">
+<div class="title">KARAKTER SUARA & PENGATURAN FREKUENSI</div>
+<div class="controls">
+<div class="ctl"><label>SPEED <button class="reset" data-reset="speed">RESET</button><span class="val" id="speedV">100%</span></label><input id="speed" type="range" min="50" max="200" step="0.1" value="100"></div>
+<div class="ctl"><label>PITCH SHIFTING <button class="reset" data-reset="pitch">RESET</button><span class="val" id="pitchV">0 st</span></label><input id="pitch" type="range" min="-12" max="12" step="0.01" value="0"></div>
+<div class="ctl"><label>JENIS SUARA <button class="reset" data-reset="voice">RESET</button><span class="val" id="voiceV">Natural</span></label><select id="voice"><option value="Natural">Natural</option><option value="Warm Voice">Warm Voice</option><option value="Clear Voice">Clear Voice</option><option value="Deep Voice">Deep Voice</option><option value="Bright Voice">Bright Voice</option><option value="Soft Voice">Soft Voice</option><option value="Airy Voice">Airy Voice</option><option value="Radio">Radio</option><option value="Telephone">Telephone</option><option value="Robot">Robot</option><option value="Chipmunk">Chipmunk</option><option value="Bass Boost">Bass Boost</option><option value="Megaphone">Megaphone</option><option value="Whisper">Whisper</option><option value="Underwater">Underwater</option><option value="Alien">Alien</option><option value="Distortion">Distortion</option><option value="Flanger">Flanger</option></select></div>
+<div class="ctl"><label>GAIN <button class="reset" data-reset="gain">RESET</button><span class="val" id="gainV">100%</span></label><input id="gain" type="range" min="0" max="200" step="0.1" value="100"></div>
+<div class="ctl"><label>KEKUATAN EFEK SUARA <button class="reset" data-reset="intensity">RESET</button><span class="val" id="intensityV">100%</span></label><input id="intensity" type="range" min="0" max="300" step="1" value="100"></div>
+<div class="ctl"><label>LOW CUT / GEMURUH <button class="reset" data-reset="lowcut">RESET</button><span class="val" id="lowcutV">80 Hz</span></label><input id="lowcut" type="range" min="40" max="250" step="1" value="80"></div>
+<div class="ctl"><label>BODY / KETEBALAN <button class="reset" data-reset="body">RESET</button><span class="val" id="bodyV">0 dB</span></label><input id="body" type="range" min="-6" max="6" step="0.1" value="0"></div>
+<div class="ctl"><label>CLARITY / KEJELASAN <button class="reset" data-reset="clarity">RESET</button><span class="val" id="clarityV">0 dB</span></label><input id="clarity" type="range" min="-6" max="6" step="0.1" value="0"></div>
+<div class="ctl"><label>PRESENCE / ARTIKULASI <button class="reset" data-reset="presence">RESET</button><span class="val" id="presenceV">0 dB</span></label><input id="presence" type="range" min="-6" max="6" step="0.1" value="0"></div>
+<div class="ctl"><label>AIR / DETAIL ATAS <button class="reset" data-reset="air">RESET</button><span class="val" id="airV">0 dB</span></label><input id="air" type="range" min="-6" max="6" step="0.1" value="0"></div>
+<div class="ctl"><label>REVERB <button class="reset" data-reset="reverb">RESET</button><span class="val" id="reverbV">0%</span></label><input id="reverb" type="range" min="0" max="200" step="0.1" value="0"></div>
+<div class="ctl"><label>ECHO <button class="reset" data-reset="echo">RESET</button><span class="val" id="echoV">0%</span></label><input id="echo" type="range" min="0" max="200" step="0.1" value="0"></div>
+<div class="ctl"><label>ECHO DELAY <button class="reset" data-reset="delay">RESET</button><span class="val" id="delayV">300 ms</span></label><input id="delay" type="range" min="1" max="2000" step="1" value="300"></div>
+</div>
+
+<div class="wave" id="drop"><canvas id="canvas"></canvas><div class="empty" id="empty">Drop lagu atau klik Buka lagu</div><div class="status" id="status">Belum ada audio</div></div>
+<div class="transport"><div class="btns"><span class="time" id="time">0:00 / 0:00</span><button class="circle" id="back">↶</button><button class="circle play primary" id="play">▶</button><button class="circle" id="stop">■</button></div><div class="timeline" id="timeline"><div class="progress" id="progress"></div></div><div class="vol">🔊<input id="volume" type="range" min="0" max="100" value="100"><span id="volV">100%</span></div></div>
+</section><div class="bottom"><span class="hint">Mode offline: satu file lagu diproses langsung di browser. EQ frekuensi memberi sentuhan halus pada karakter suara, tetapi karena vokal dan musik masih menyatu, instrumen pada frekuensi yang sama juga dapat ikut berubah. WAV bekerja offline; MP3* memerlukan internet untuk memuat encoder.</span><span id="name">—</span></div>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const ui={file:$('file'),wav:$('exportWav'),mp3:$('exportMp3'),speed:$('speed'),pitch:$('pitch'),voice:$('voice'),gain:$('gain'),intensity:$('intensity'),reverb:$('reverb'),echo:$('echo'),delay:$('delay'),volume:$('volume'),speedV:$('speedV'),pitchV:$('pitchV'),voiceV:$('voiceV'),gainV:$('gainV'),intensityV:$('intensityV'),reverbV:$('reverbV'),echoV:$('echoV'),delayV:$('delayV'),volV:$('volV'),lowcut:$('lowcut'),body:$('body'),clarity:$('clarity'),presence:$('presence'),air:$('air'),lowcutV:$('lowcutV'),bodyV:$('bodyV'),clarityV:$('clarityV'),presenceV:$('presenceV'),airV:$('airV'),canvas:$('canvas'),drop:$('drop'),empty:$('empty'),status:$('status'),time:$('time'),progress:$('progress'),timeline:$('timeline'),play:$('play'),stop:$('stop'),back:$('back'),name:$('name')};
+const state={ctx:null,buffer:null,file:null,processed:null,source:null,gainNode:null,playing:false,position:0,startedAt:0,token:0,timer:0,raf:0,fxOscillators:[]};
+const defaults={speed:100,pitch:0,voice:'Natural',gain:100,intensity:100,volume:100,reverb:0,echo:0,delay:300,lowcut:35,body:0,clarity:0,presence:0,air:0};
+function fmt(s){s=Math.max(0,s||0);return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
+function updateLabels(){ui.speedV.textContent=ui.speed.value+'%';ui.pitchV.textContent=(Number(ui.pitch.value)>0?'+':'')+Number(ui.pitch.value).toFixed(1).replace(/\.0$/,'')+' st';ui.voiceV.textContent=ui.voice.value;ui.gainV.textContent=Number(ui.gain.value).toFixed(1).replace(/\.0$/,'')+'%';ui.intensityV.textContent=ui.intensity.value+'%';ui.reverbV.textContent=ui.reverb.value+'%';ui.echoV.textContent=ui.echo.value+'%';ui.delayV.textContent=ui.delay.value+' ms';ui.volV.textContent=ui.volume.value+'%';ui.lowcutV.textContent=ui.lowcut.value+' Hz';for(const k of ['body','clarity','presence','air'])ui[k+'V'].textContent=(Number(ui[k].value)>0?'+':'')+Number(ui[k].value).toFixed(1)+' dB'}
+function applyLiveGain(){if(state.gainNode)state.gainNode.gain.value=Number(ui.gain.value)/100*Number(ui.volume.value)/100}
+[ui.speed,ui.pitch,ui.intensity,ui.reverb,ui.echo,ui.delay,ui.lowcut,ui.body,ui.clarity,ui.presence,ui.air].forEach(el=>el.addEventListener('input',()=>{updateLabels();scheduleRender()}));
+ui.gain.addEventListener('input',()=>{updateLabels();applyLiveGain()});
+ui.volume.addEventListener('input',()=>{updateLabels();applyLiveGain()});
+ui.voice.addEventListener('change',()=>{updateLabels();scheduleRender(true)});
+updateLabels();
+function drawWave(){const c=ui.canvas,r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,r.width,r.height);x.strokeStyle='#242424';for(let i=1;i<8;i++){x.beginPath();x.moveTo(0,r.height*i/8);x.lineTo(r.width,r.height*i/8);x.stroke()}if(!state.buffer)return;const a=state.buffer.getChannelData(0),step=Math.max(1,Math.ceil(a.length/r.width));x.strokeStyle='#ffd21a';x.beginPath();for(let p=0;p<r.width;p++){let s=p*step,e=Math.min(a.length,s+step),mi=1,ma=-1;for(let j=s;j<e;j++){mi=Math.min(mi,a[j]);ma=Math.max(ma,a[j])}x.moveTo(p,(1+mi)*r.height/2);x.lineTo(p,(1+ma)*r.height/2)}x.stroke()}
+addEventListener('resize',drawWave);
+async function decodeFile(file){state.ctx ||= new(window.AudioContext||window.webkitAudioContext)();return state.ctx.decodeAudioData((await file.arrayBuffer()).slice(0))}
+async function load(file){if(!file)return;try{stopPlayback();state.file=file;state.buffer=await decodeFile(file);state.position=0;state.processed=null;ui.empty.style.display='none';ui.name.textContent=file.name;ui.wav.disabled=ui.mp3.disabled=false;drawWave();updateTransport();await scheduleRender(true);ui.status.textContent=fmt(state.buffer.duration)+' • Lagu siap diproses offline'}catch(e){console.error(e);ui.status.textContent='Gagal membaca audio';alert('File audio tidak dapat dibaca browser.')}}
+ui.file.onchange=e=>load(e.target.files[0]);['dragenter','dragover'].forEach(v=>ui.drop.addEventListener(v,e=>{e.preventDefault();ui.drop.style.borderColor='#ffd21a'}));['dragleave','drop'].forEach(v=>ui.drop.addEventListener(v,e=>{e.preventDefault();ui.drop.style.borderColor='#343434'}));ui.drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
+function makeBuffer(ch,len,sr){return state.ctx.createBuffer(ch,len,sr)}
+function resample(src,factor){if(Math.abs(factor-1)<1e-6)return src;const out=makeBuffer(src.numberOfChannels,Math.max(1,Math.round(src.length/factor)),src.sampleRate);for(let c=0;c<src.numberOfChannels;c++){const a=src.getChannelData(c),b=out.getChannelData(c);for(let i=0;i<b.length;i++){const p=i*factor,j=Math.floor(p),f=p-j,v0=a[Math.min(j,a.length-1)]||0,v1=a[Math.min(j+1,a.length-1)]||v0;b[i]=v0+(v1-v0)*f}}return out}
+// High quality-ish granular OLA time stretch. Duration changes, pitch stays approximately constant.
+function stretch(src,factor){factor=Math.max(.5,Math.min(2,Number(factor)));if(Math.abs(factor-1)<.0001)return src;const N=2048,Hout=512,Hin=Hout*factor,outLen=Math.max(1,Math.round(src.length/factor)),out=makeBuffer(src.numberOfChannels,outLen,src.sampleRate),win=new Float32Array(N);for(let i=0;i<N;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));for(let c=0;c<src.numberOfChannels;c++){const a=src.getChannelData(c),b=out.getChannelData(c),norm=new Float32Array(outLen);let op=0,ip=0;while(op<outLen){const base=Math.floor(ip);for(let j=0;j<N && op+j<outLen;j++){const si=base+j;if(si<a.length){b[op+j]+=a[si]*win[j];norm[op+j]+=win[j]}}op+=Hout;ip+=Hin}for(let i=0;i<outLen;i++)if(norm[i]>.0001)b[i]/=norm[i]}return out}
+// Pitch shift: resample to change pitch, then time-stretch back to original duration.
+function pitchShift(src,semitones){if(!semitones)return src;const p=Math.pow(2,Number(semitones)/12);return stretch(resample(src,p),1/p)}
+function voicePitch(v){return v==='Chipmunk'?7:0}
+function processLegacyStem(src){let b=pitchShift(src,Number(ui.pitch.value)+voicePitch(ui.voice.value));return stretch(b,Number(ui.speed.value)/100)}
+function buildProcessed(){let b=pitchShift(state.buffer,Number(ui.pitch.value)+voicePitch(ui.voice.value));return stretch(b,Number(ui.speed.value)/100)}
+async function scheduleRender(immediate=false){if(!state.buffer)return;clearTimeout(state.timer);const run=async()=>{const token=++state.token,was=state.playing,pos=currentOriginalPosition();if(was)stopPlayback();ui.status.textContent='Memproses…';await new Promise(r=>setTimeout(r,0));try{const b=buildProcessed();if(token!==state.token)return;state.processed=b;state.position=Math.min(pos,state.buffer.duration);ui.status.textContent=fmt(state.buffer.duration)+' • Speed '+ui.speed.value+'% • Pitch '+ui.pitch.value+' st • FX aktif';updateTransport();if(was)startPlayback()}catch(e){console.error(e);ui.status.textContent='Pemrosesan gagal'}};if(immediate)await run();else state.timer=setTimeout(run,450)}
+function currentOriginalPosition(){if(!state.buffer)return 0;if(!state.playing)return state.position;const elapsed=Math.max(0,state.ctx.currentTime-state.startedAt);return Math.min(state.buffer.duration,elapsed*Number(ui.speed.value)/100)}
+function disconnect(){if(state.source){try{state.source.stop()}catch(e){}try{state.source.disconnect()}catch(e){}}for(const osc of state.fxOscillators){try{osc.stop()}catch(e){}}state.fxOscillators=[];state.source=null;state.gainNode=null}
+function addVocalEQ(ctx,input){
+  let last=input;
+  const low=ctx.createBiquadFilter();low.type='highpass';low.frequency.value=Number(ui.lowcut.value);low.Q.value=.55;last.connect(low);last=low;
+  const bands=[['lowshelf',180,'body'],['peaking',2800,'clarity'],['peaking',4800,'presence'],['highshelf',10500,'air']];
+  for(const [type,freq,key] of bands){const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=type==='peaking'?0.85:0.7;f.gain.value=Number(ui[key].value);last.connect(f);last=f;}
+  return last;
+}
+function applyNaturalVoice(ctx,input,voice){
+  let last=input;
+  const preset={
+    'Natural':[], 'Warm Voice':[['lowshelf',170,2.0],['peaking',3200,-1.0]],
+    'Clear Voice':[['peaking',3000,2.0],['peaking',5200,1.0]],
+    'Deep Voice':[['lowshelf',160,2.5],['peaking',3500,-1.0]],
+    'Bright Voice':[['highshelf',7000,2.0],['peaking',4200,1.2]],
+    'Soft Voice':[['peaking',3000,-2.0],['highshelf',8500,-1.0]],
+    'Airy Voice':[['highshelf',9500,2.5],['peaking',4500,0.8]]
+  }[voice];
+  if(preset){for(const [type,freq,gain] of preset){const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=.8;f.gain.value=gain;last.connect(f);last=f;}return last;}
+  return applyVoiceEffect(ctx,input,voice);
+}
+function addVocalFx(ctx,input){
+  let current=input;
+  const reverbMix=Number(ui.reverb.value)/200;
+  if(reverbMix>0){
+    const dry=ctx.createGain(),wet=ctx.createGain(),conv=ctx.createConvolver(),sum=ctx.createGain();
+    const seconds=2.8,rate=ctx.sampleRate,length=Math.floor(rate*seconds),impulse=ctx.createBuffer(2,length,rate);
+    for(let ch=0;ch<2;ch++){const data=impulse.getChannelData(ch);for(let i=0;i<length;i++){const t=1-i/length;data[i]=(Math.random()*2-1)*Math.pow(t,2.1)*1.1}}
+    conv.buffer=impulse;dry.gain.value=1-reverbMix*.18;wet.gain.value=reverbMix*1.35;
+    current.connect(dry);current.connect(conv);conv.connect(wet);dry.connect(sum);wet.connect(sum);current=sum;
+  }
+  const echoMix=Number(ui.echo.value)/200;
+  if(echoMix>0){
+    const dry=ctx.createGain(),wet=ctx.createGain(),delay=ctx.createDelay(2.1),feedback=ctx.createGain(),sum=ctx.createGain();
+    delay.delayTime.value=Number(ui.delay.value)/1000;feedback.gain.value=Math.min(.78,.18+echoMix*.52);
+    dry.gain.value=1-echoMix*.12;wet.gain.value=echoMix*1.25;
+    current.connect(dry);current.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);dry.connect(sum);wet.connect(sum);current=sum;
+  }
+  return current;
+}
+function applyVoiceEffect(ctx,input,voice){
+  let last=input; const amount=Math.max(0,Number(ui.intensity.value))/100;
+  const filter=(type,freq,q=1,gain=0)=>{const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;if(gain)f.gain.value=gain*amount;last.connect(f);last=f};
+  if(voice==='Telephone'){filter('highpass',350);filter('lowpass',3200)}
+  else if(voice==='Radio'){filter('highpass',180);filter('lowpass',6500);last=distort(ctx,last,1.8*amount)}
+  else if(voice==='Deep')filter('lowshelf',220,1,9)
+  else if(voice==='Bright')filter('highshelf',3000,1,8)
+  else if(voice==='Robot'||voice==='Alien'){
+    const mod=ctx.createGain(),osc=ctx.createOscillator();mod.gain.value=voice==='Robot'?Math.min(1.5,.62*amount):Math.min(1.8,.95*amount);osc.frequency.value=voice==='Robot'?70:voice==='Alien'?32:70;osc.connect(mod.gain);last.connect(mod);osc.start();if(ctx===state.ctx)state.fxOscillators.push(osc);last=mod;
+  }
+  else if(voice==='Warm'){filter('lowshelf',180,1,4);filter('highshelf',5200,1,-2)}
+  else if(voice==='Soft'){filter('lowpass',6500);filter('peaking',2800,0.8,-3)}
+  else if(voice==='Airy'){filter('highshelf',6500,1,10)}
+  else if(voice==='Bass Boost'){filter('lowshelf',140,1,14)}
+  else if(voice==='Megaphone'){filter('bandpass',1200,0.8);last=distort(ctx,last,3.2*amount)}
+  else if(voice==='Whisper'){filter('highpass',900);filter('highshelf',4500,1,8);const g=ctx.createGain();g.gain.value=.72;last.connect(g);last=g}
+  else if(voice==='Underwater'){filter('lowpass',850);filter('peaking',350,1.2,5)}
+  else if(voice==='Distortion')last=distort(ctx,last,5*amount)
+  else if(voice==='Flanger'){
+    const delay=ctx.createDelay(.05),base=ctx.createGain(),depth=ctx.createGain(),lfo=ctx.createOscillator(),mix=ctx.createGain();delay.delayTime.value=.008;base.gain.value=.65;depth.gain.value=.004*amount;lfo.frequency.value=.22+amount*.15;lfo.connect(depth);depth.connect(delay.delayTime);lfo.start();if(ctx===state.ctx)state.fxOscillators.push(lfo);last.connect(base);last.connect(delay);delay.connect(mix);base.connect(mix);last=mix;
+  }
+  return last;
+}
+function distort(ctx,input,drive){const sh=ctx.createWaveShaper(),n=4096,curve=new Float32Array(n);for(let i=0;i<n;i++){const x=i*2/(n-1)-1;curve[i]=Math.tanh(x*Math.max(.2,drive))}sh.curve=curve;sh.oversample='4x';input.connect(sh);return sh}
+function graph(){const c=state.ctx,s=c.createBufferSource();s.buffer=state.processed||state.buffer;let last=applyNaturalVoice(c,s,ui.voice.value);last=addVocalEQ(c,last);last=addVocalFx(c,last);const g=c.createGain();g.gain.value=Number(ui.gain.value)/100*Number(ui.volume.value)/100;last.connect(g);g.connect(c.destination);state.source=s;state.gainNode=g;s._extra=last;return s}
+async function startPlayback(){if(!state.buffer)return;await state.ctx.resume();if(state.playing)return;if(!state.processed)await scheduleRender(true);const original=state.position;const speed=Number(ui.speed.value)/100;const processedPos=Math.min((state.processed?.duration||state.buffer.duration)-.01,original/speed);const s=graph();state.startedAt=state.ctx.currentTime-processedPos;state.playing=true;ui.play.textContent='Ⅱ';s.onended=()=>{if(state.playing){state.playing=false;state.position=0;disconnect();ui.play.textContent='▶';updateTransport()}};s.start(0,processedPos)}
+function stopPlayback(){if(state.playing)state.position=currentOriginalPosition();disconnect();state.playing=false;ui.play.textContent='▶';updateTransport()}
+function stopBeginning(){disconnect();state.playing=false;state.position=0;ui.play.textContent='▶';updateTransport()}
+function updateTransport(){if(!state.buffer){ui.time.textContent='0:00 / 0:00';ui.progress.style.width='0%';return}const p=currentOriginalPosition();ui.time.textContent=fmt(p)+' / '+fmt(state.buffer.duration);ui.progress.style.width=(p/state.buffer.duration*100)+'%'}
+function tick(){updateTransport();if(state.playing)state.raf=requestAnimationFrame(tick)}
+ui.play.onclick=()=>state.playing?stopPlayback():startPlayback();ui.stop.onclick=stopBeginning;ui.back.onclick=()=>{if(!state.buffer)return;const p=Math.max(0,currentOriginalPosition()-5);if(state.playing){stopPlayback();state.position=p;startPlayback()}else{state.position=p;updateTransport()}};ui.timeline.onclick=e=>{if(!state.buffer)return;const r=ui.timeline.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*state.buffer.duration;if(state.playing){stopPlayback();state.position=p;startPlayback()}else{state.position=p;updateTransport()}};
+function setDefaults(){Object.keys(defaults).forEach(k=>{if(ui[k])ui[k].value=defaults[k]});updateLabels();scheduleRender(true)}
+function resetOne(k){if(ui[k])ui[k].value=defaults[k];updateLabels();scheduleRender(true)}
+document.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>resetOne(b.dataset.reset));
+async function renderEdited(){if(!state.buffer)throw new Error('Muat lagu terlebih dahulu');const vocal=buildProcessed(),off=new OfflineAudioContext(vocal.numberOfChannels,vocal.length,vocal.sampleRate);const s=off.createBufferSource();s.buffer=vocal;let last=applyNaturalVoice(off,s,ui.voice.value);last=addVocalEQ(off,last);last=addVocalFx(off,last);const vg=off.createGain();vg.gain.value=Number(ui.gain.value)/100*Number(ui.volume.value)/100;last.connect(vg);vg.connect(off.destination);s.start(0);return off.startRendering()}
+function wavBlob(b){const n=b.numberOfChannels,L=b.length,ab=new ArrayBuffer(44+L*n*2),v=new DataView(ab),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))},u16=(o,x)=>v.setUint16(o,x,true),u32=(o,x)=>v.setUint32(o,x,true);w(0,'RIFF');u32(4,36+L*n*2);w(8,'WAVE');w(12,'fmt ');u32(16,16);u16(20,1);u16(22,n);u32(24,b.sampleRate);u32(28,b.sampleRate*n*2);u16(32,n*2);u16(34,16);w(36,'data');u32(40,L*n*2);const ch=Array.from({length:n},(_,i)=>b.getChannelData(i));let o=44;for(let i=0;i<L;i++)for(let c=0;c<n;c++){let q=Math.max(-1,Math.min(1,ch[c][i]));v.setInt16(o,q<0?q*32768:q*32767,true);o+=2}return new Blob([ab],{type:'audio/wav'})}
+function save(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}
+ui.wav.onclick=async()=>{ui.wav.disabled=ui.mp3.disabled=true;ui.status.textContent='Mengekspor WAV…';try{save(wavBlob(await renderEdited()),'audioku-edit.wav');ui.status.textContent='WAV berhasil diekspor'}catch(e){console.error(e);alert('Export WAV gagal: '+e.message)}finally{ui.wav.disabled=ui.mp3.disabled=false}};
+// MP3 uses LAME.js loaded on demand. The application remains one HTML file; internet is only needed the first time MP3 export is used.
+async function loadLame(){if(window.lamejs)return window.lamejs;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';s.onload=res;s.onerror=()=>rej(new Error('Encoder MP3 tidak dapat dimuat. Periksa koneksi internet.'));document.head.appendChild(s)});return window.lamejs}
+async function mp3Blob(b){const lame=await loadLame(),enc=new lame.Mp3Encoder(b.numberOfChannels,b.sampleRate,192),ch=Array.from({length:b.numberOfChannels},(_,i)=>b.getChannelData(i)),block=1152,parts=[];for(let i=0;i<b.length;i+=block){const end=Math.min(b.length,i+block),L=new Int16Array(end-i),R=b.numberOfChannels>1?new Int16Array(end-i):null;for(let j=i;j<end;j++){let l=Math.max(-1,Math.min(1,ch[0][j]));L[j-i]=l<0?l*32768:l*32767;if(R){let r=Math.max(-1,Math.min(1,ch[1][j]));R[j-i]=r<0?r*32768:r*32767}}const out=R?enc.encodeBuffer(L,R):enc.encodeBuffer(L);if(out.length)parts.push(new Uint8Array(out))}const end=enc.flush();if(end.length)parts.push(new Uint8Array(end));return new Blob(parts,{type:'audio/mpeg'})}
+ui.mp3.onclick=async()=>{ui.wav.disabled=ui.mp3.disabled=true;ui.status.textContent='Mengekspor MP3…';try{const rendered=await renderEdited(),blob=await mp3Blob(rendered);save(blob,'audioku-edit.mp3');ui.status.textContent='MP3 berhasil diekspor'}catch(e){console.error(e);alert('Export MP3 gagal: '+e.message);ui.status.textContent='Export MP3 gagal'}finally{ui.wav.disabled=ui.mp3.disabled=false}};
+
+// PWA satu-file: manifest dan ikon ditanam langsung di HTML.
+(function initDesktopInstall(){
+  const icon192='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFOElEQVR4nO3dvY4aSRiG0Z7VBji178WxL31i34ud2pk32Za8LGCarp+v+z0ns2SNGPgeqgoa5u1yufxaINRfs28AzCQAogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAov09+wa09OPrx9k3IcaHz99n34Qm3o76eQDDXs8RozhUAIb+OI4SwyECMPjHVT2E0gFsHfxPX352uiVc+/Z+2fT/q4ZQMoBnB9/A1/FsENVCKBXAM4Nv6Ot7JoYqIZQJ4NHwG/rjehRDhQimB3CUwd+y5610u6uoGsLUd4LPOPyv/P8Ejx7Pma/yTXsn+N4vXWnwaWt9bG89Qfz4+nHKSjBlBTD82e49zjNWguErwK1f0uDnubcajF4Jhq4Ahp9rtx7/kSvBsAAMP/fMjGDIFsjwt3Hml2I/ffk5ZTvUfQUw/G0kvBQ7YyXoGoDhZ6vREQw9BBt+njFyTroF4Bp+Wuo1T10CsPVhr1FboSFbIMPPK0bMTfMAbH3oqfV8dV8BPPuzR+/5aRrAdZ2Gnxau56jlKuCb4YjWLADP/vTUaxU41Vcj3rL1kgDhZmmyAlR95eeV62GOeA1NqhZz1+UM4FmUHnrMlUMw0XafAapuf7jtbGeivZ8ZaL4CVL/Dkp3hTNR6vmyBiCYAogmAaLsOwd793ebZ/bT78bHrD9DvOQhbAQbZcpisdvA8MwEQTQBEEwDRBEA0ARBNAEQr+4GYs120RU0lV4AzXLTFMZQMAEYRANHKngGo7SxnNCsAm53pjCYAogmAaAIgmgCIJgCiCYBoAiCaAIgmAKJ1vRTC14BQXbcVwNeAcAQuhmOaCjsEZwCmqLJDEADRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBMAUW/70ac8/k+rvBDNNz8F+VrcVoErh8EjXFcBgU50zANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBMBmr7zDX/WqABfD8ZKqA72VFYBoAiBayQDOtMektrJnAAPNCCVXABhFAEQTANEEQDQBEE0ARBPAIL4mpqay7wOckcGuZ9cK8OHz9//8+9v7ZdeNgWdcz9n1HG5hC0Q0ARBNAEFcZPh/zQ/B394vp7/Tjuzoj03rc+buFWDPAQT22jt/tkBE6xJAlZdD7XnPpcdcNTkDfPj8ffnx9WOLH9WcgT6vFttvWyCiNQvAu8L01PLd399ZAYjWNACrAD30evZflgErgAjYo/f8NA/AG2P01Hq+hpwBrAK8YsTcdAngVqUiYItb89Jjd9FtBbAVoqVe8zT0ZVCrAM8YOSddA7AVamfrJR1HvQRk1NZn9Xa5XH51++n/unWd0JEeoFeiPdLvV8Xo4V+WQVsgKwF/MmP4l2XgGUAE3DNr+Jdl8CFYBFybOfzLMuGLsW59dmC9E+ybc9x74hv98vmUq0Hv/ZJWgwxVhn9ZBr0KdM+jT5FVWw22xFnttlfx6D6c9cbp1ACW5VgR8LqKw78sBQJYCeGcqg7+qkwAy/I4gpUY6ntmu1hh+JelWACrZ79hQgx1PHtGqjL4q5IBrLZ+1Yogxtn6il21wV+VDmBV9TuH+LOqg786RAArIRxH9cFfHSqA34mhnqMM/e8OG8AtohjniMN+y6kCgK18MxzRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDR/gH6I6mgPLnfqQAAAABJRU5ErkJggg==';
+  const icon512='data:image/png;base64,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';
+  const manifest={
+    id:location.pathname,
+    name:'Audioku — Audio Editor',
+    short_name:'Audioku',
+    description:'Editor audio offline Audioku',
+    start_url:location.href.split('#')[0],
+    scope:location.href.split('#')[0].replace(/[^/]*$/, ''),
+    display:'standalone',
+    orientation:'landscape',
+    background_color:'#060606',
+    theme_color:'#ffd21a',
+    icons:[
+      {src:icon192,sizes:'192x192',type:'image/png',purpose:'any'},
+      {src:icon512,sizes:'512x512',type:'image/png',purpose:'any'}
+    ]
+  };
+  const link=document.createElement('link');
+  link.rel='manifest';
+  link.href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify(manifest));
+  document.head.appendChild(link);
+  const installBtn=document.getElementById('installApp');
+  let installPrompt=null;
+  const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  function refreshInstallButton(){
+    if(!installBtn)return;
+    if(isStandalone()){installBtn.textContent='✓ TERINSTAL';installBtn.disabled=true;}
+  }
+  window.addEventListener('beforeinstallprompt',event=>{
+    event.preventDefault();installPrompt=event;
+    if(installBtn){installBtn.disabled=false;installBtn.textContent='＋ INSTAL PC';}
+  });
+  window.addEventListener('appinstalled',()=>{
+    installPrompt=null;
+    if(installBtn){installBtn.textContent='✓ TERINSTAL';installBtn.disabled=true;}
+  });
+  if(installBtn)installBtn.addEventListener('click',async()=>{
+    if(location.protocol==='file:'){
+      alert('Agar bisa diinstal, buka Audioku melalui localhost atau HTTPS. Jalankan: py -m http.server 3000, lalu buka http://localhost:3000');
+      return;
+    }
+    if(installPrompt){
+      installPrompt.prompt();
+      try{await installPrompt.userChoice;}catch(e){}
+      installPrompt=null;
+      return;
+    }
+    alert('Jika tombol instal belum muncul: buka menu Chrome/Edge (⋮), pilih Cast, save, and share / Simpan dan bagikan, lalu Install page as app / Instal halaman sebagai aplikasi. Pastikan Audioku dibuka dari localhost atau HTTPS.');
+  });
+  refreshInstallButton();
+  window.matchMedia('(display-mode: standalone)').addEventListener?.('change',refreshInstallButton);
+})();
+</script></body></html>
